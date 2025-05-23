@@ -1,0 +1,66 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "c:/Users/drago/Desktop/PM/Project/src",
+                "c:/Users/drago/Desktop/PM/Project/.pio/libdeps/uno/Adafruit ST7735 and ST7789 Library",
+                "c:/Users/drago/Desktop/PM/Project/.pio/libdeps/uno/Adafruit GFX Library",
+                "c:/Users/drago/Desktop/PM/Project/.pio/libdeps/uno/Adafruit BusIO",
+                "C:/Users/drago/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                "C:/Users/drago/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                "c:/Users/drago/Desktop/PM/Project/include",
+                "C:/Users/drago/.platformio/packages/framework-arduino-avr/cores/arduino",
+                "C:/Users/drago/.platformio/packages/framework-arduino-avr/variants/standard",
+                "c:/Users/drago/Desktop/PM/Project/.pio/libdeps/uno/Adafruit seesaw Library",
+                "c:/Users/drago/Desktop/PM/Project/.pio/libdeps/uno/SD/src",
+                "C:/Users/drago/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                "C:/Users/drago/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                "C:/Users/drago/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "c:/Users/drago/Desktop/PM/Project/src",
+                    "c:/Users/drago/Desktop/PM/Project/.pio/libdeps/uno/Adafruit ST7735 and ST7789 Library",
+                    "c:/Users/drago/Desktop/PM/Project/.pio/libdeps/uno/Adafruit GFX Library",
+                    "c:/Users/drago/Desktop/PM/Project/.pio/libdeps/uno/Adafruit BusIO",
+                    "C:/Users/drago/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                    "C:/Users/drago/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                    "c:/Users/drago/Desktop/PM/Project/include",
+                    "C:/Users/drago/.platformio/packages/framework-arduino-avr/cores/arduino",
+                    "C:/Users/drago/.platformio/packages/framework-arduino-avr/variants/standard",
+                    "c:/Users/drago/Desktop/PM/Project/.pio/libdeps/uno/Adafruit seesaw Library",
+                    "c:/Users/drago/Desktop/PM/Project/.pio/libdeps/uno/SD/src",
+                    "C:/Users/drago/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                    "C:/Users/drago/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                    "C:/Users/drago/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=60118",
+                "ARDUINO_AVR_UNO",
+                "F_CPU=16000000L",
+                "ARDUINO_ARCH_AVR",
+                "ARDUINO=10808",
+                "__AVR_ATmega328P__",
+                ""
+            ],
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++11",
+            "compilerPath": "C:/Users/drago/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
+            "compilerArgs": [
+                "-mmcu=atmega328p",
+                ""
+            ]
+        }
+    ],
+    "version": 4
+}

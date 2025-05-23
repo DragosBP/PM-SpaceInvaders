@@ -1,0 +1,27 @@
+Alb- Ground
+Gri/Negru - 5V
+
+Joystick:
+Rosu - Output Y joystick (A0) - PC0
+Portocaliu - Output X joystick (A1) - PC1
+
+Display:
+SURSA: 3.3
+Galben - CS (D10) - PB2
+Albastru - Reset - 3.3
+Verde - DC (D9) - PB1
+Portocaliu - MOSI (D11) - PB3
+Maro - SCK (D13) - PB5
+Led - Gri - 3.3
+Mov - MISO (D12) - PB4
+
+Buton:
+Albastru - Intrerupere INT0 (D2) - PD2
+
+Dysplay I2C:
+Verde - SDA (A4) - PC4
+Galben - SCL (A5) - PC5
+
+Buzzer 1:
+Rosu - Timer2 (D6) - PD6: OC2B
+Negru (URAT) - Timer0 (D5) - PD5: OC2A
