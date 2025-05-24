@@ -22,9 +22,10 @@
 #define SCALE 2
 
 // Tank constants
-#define PLAY_TANK_Y 290
+#define PLAY_TANK_Y 280
 #define TANK_HEIGHT 9
 #define TANK_WIDTH 15
+#define TANK_LASER_SPEED 10
 
 // Alien constants
 // Hitbox sizes
@@ -36,9 +37,13 @@
 #define NR_ROWS 5
 
 // Movement
+#define ALIEN_DROP 5
 #define ALIEN_JUMP 2
 #define ALIEN_RIGHT 30
 #define ALIEN_LEFT 4
+
+// Laser constants
+#define LASER_LAST 15
 
 // Menu functions
 void display_start_screen(Adafruit_ST7789 &tft, char *text);
@@ -52,8 +57,17 @@ void clear_zone(Adafruit_ST7789 &tft, int position_x, int position_y, int width,
 void draw_tank_bitmap(Adafruit_ST7789 &tft, int position_x, int position_y, uint16_t color);
 int16_t calcluate_tank_position(int16_t old_position, int speed);
 
+// Tank lasers
+void draw_tank_laser(Adafruit_ST7789 &tft, int position_x, int position_y, uint16_t color);
+int16_t calcluate_tank_laser_position(int16_t old_position);
+
 // Aliens
 void draw_alien_bitmap(Adafruit_ST7789 &tft, int x0, int y0, const uint8_t sprite[BUFFER_HEIGHT][BUFFER_WIDTH], uint16_t color);
 void draw_alien_row(Adafruit_ST7789 &tft, int columns[NR_ALIENS], uint16_t start_x,  uint16_t position_y, int row_nr, int frame, uint16_t color);
+void draw_alien_explosion(Adafruit_ST7789 &tft,int row,int col,uint16_t aliens_x,uint16_t start_y,uint16_t color);
+
+// Lasers
+void draw_laser_miss(Adafruit_ST7789 &tft, int x0, int y0, uint16_t color);
+int laser_hits_alien(int16_t laser_x, int16_t laser_y, int16_t aliens_x, int16_t aliens_y, int columns[NR_ALIENS]);
 
 #endif

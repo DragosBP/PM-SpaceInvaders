@@ -45,6 +45,7 @@ void clear_zone(Adafruit_ST7789 &tft, int position_x, int position_y, int width,
 
 static uint16_t buffer[BUFFER_WIDTH * BUFFER_HEIGHT * SCALE * SCALE];
 
+// Tank
 void draw_tank_bitmap(Adafruit_ST7789 &tft, int position_x, int position_y, uint16_t color) {
     clear_zone(tft, 0, position_y, position_x, BUFFER_HEIGHT * SCALE);
     clear_zone(tft, position_x + BUFFER_WIDTH * SCALE, position_y, WIDTH - (position_x + BUFFER_WIDTH * SCALE), BUFFER_HEIGHT * SCALE);
@@ -68,7 +69,6 @@ void draw_tank_bitmap(Adafruit_ST7789 &tft, int position_x, int position_y, uint
     tft.drawRGBBitmap(position_x, position_y, buf, sw, sh);
 }
 
-
 int16_t calcluate_tank_position(int16_t old_position, int speed) {
     int16_t tank_position = old_position + speed;
     
@@ -81,6 +81,20 @@ int16_t calcluate_tank_position(int16_t old_position, int speed) {
     }
 
     return tank_position;
+}
+
+void draw_tank_laser(Adafruit_ST7789 &tft, int position_x, int position_y, uint16_t color) {
+    const int len = BUFFER_HEIGHT * SCALE / 2;
+    
+    clear_zone(tft, position_x, position_y + len, SCALE, TANK_LASER_SPEED);
+    
+    tft.drawRect(position_x, position_y, SCALE, len, color);
+}
+
+int16_t calcluate_tank_laser_position(int16_t old_position) {
+    int16_t laser_position = old_position - TANK_LASER_SPEED;
+
+    return laser_position;
 }
 
 // Aliens
@@ -131,7 +145,94 @@ void draw_alien_row(Adafruit_ST7789 &tft,
     for (int col = 0; col < NR_ALIENS; col++) {
         if (row_nr < columns[col]) {
             draw_alien_bitmap(tft, start_x, position_y, alien, color);
+        } else {
+            clear_zone(tft, start_x, position_y, BUFFER_WIDTH * SCALE, BUFFER_HEIGHT * SCALE);
         }
         start_x += BUFFER_WIDTH * SCALE;
     }
+}
+
+void draw_alien_explosion(Adafruit_ST7789 &tft,
+                          int row,
+                          int col,
+                          uint16_t aliens_x,
+                          uint16_t start_y,
+                          uint16_t color)
+{
+    const uint16_t sprite_w    = ALIEN_WIDTH * SCALE;
+    const uint16_t row_spacing = (BUFFER_HEIGHT + 4) * SCALE;
+
+    // Calculate top-left corner of the alien explosion
+    uint16_t x = aliens_x + col * sprite_w;
+    uint16_t y = start_y + row * row_spacing;
+
+    draw_alien_bitmap(tft, x, y, alien_explosion, color);
+}
+
+// Lasers 
+void draw_laser_miss(Adafruit_ST7789 &tft, int x0, int y0, uint16_t color) {
+    const int sw = BUFFER_WIDTH * SCALE;
+    const int sh = BUFFER_HEIGHT * SCALE;
+    uint16_t *buf = buffer;  // Reuse the global buffer
+
+    for (int row = 0; row < BUFFER_HEIGHT; row++) {
+        for (int col = 0; col < BUFFER_WIDTH; col++) {
+            bool bit = pgm_read_byte(&laser_miss[row][col]);
+            for (int dy = 0; dy < SCALE; dy++) {
+                for (int dx = 0; dx < SCALE; dx++) {
+                    int idx = (row * SCALE + dy) * sw + (col * SCALE + dx);
+                    buf[idx] = bit ? color : ST77XX_BLACK;
+                }
+            }
+        }
+    }
+
+    tft.drawRGBBitmap(x0, y0, buf, sw, sh);
+}
+
+int laser_hits_alien(int16_t laser_x,
+                      int16_t laser_y,
+                      int16_t aliens_x,
+                      int16_t start_y,
+                      int columns[NR_ALIENS]
+                    )
+{
+    const int16_t aw          = ALIEN_WIDTH * SCALE;
+    const int16_t sprite_h    = BUFFER_HEIGHT * SCALE;
+    const int16_t row_spacing = (BUFFER_HEIGHT + 4) * SCALE;
+    const int16_t lx0         = laser_x;
+    const int16_t lx1         = laser_x + SCALE - 1;
+    const int16_t ly          = laser_y;
+
+    // trim off these many pixels (pre-scale) on left/right per row
+    static const uint8_t left_error[NR_ROWS]  = { 3, 2, 2, 1, 1 };
+    static const uint8_t right_error[NR_ROWS] = { 4, 2, 2, 1, 1 };
+
+    for (int row = 0; row < NR_ROWS; row++)
+    {
+        // full-height vertical bounds for this row
+        int16_t ay0 = start_y + row * row_spacing;
+        int16_t ay1 = ay0 + sprite_h - 1;
+        if (ly < ay0 || ly > ay1) continue;
+
+        for (int col = 0; col < NR_ALIENS; col++)
+        {
+            if (columns[col] <= row) continue;
+
+            // compute trimmed hit-box in X:
+            // start at aliens_x + col*aw + left_error*scale
+            int32_t ax0 = (int32_t)aliens_x
+                        + col * aw
+                        + left_error[row] * SCALE;
+            // end at ax0 + full width - 1 - right_error*scale
+            int32_t ax1 = ax0
+                        + aw - 1
+                        - right_error[row] * SCALE;
+
+            if (!(lx1 < ax0 || lx0 > ax1))
+                return col;
+        }
+    }
+
+    return -1;
 }

@@ -102,27 +102,62 @@ int main(void) {
     // For menu
     int show_select = 1;
     uint32_t last_show = 0;
-    uint32_t show_time = 400;
+    uint32_t show_time = 800;
     char start[] = "Start Game";
     
     // For game
     uint32_t last_frame = 0;
     uint32_t frame_time = 1000 / 30;
+    uint32_t score = 0;
+    char score_buffer[20];
 
     // For tank
+    // Body
     uint16_t tank_position = 120 - (TANK_WIDTH / 2) * SCALE;
+    
+    // Laser
+    // Tank
+    bool present_tank_laser = false;
+    uint16_t tank_laser_x = 0;
+    uint16_t tank_laser_y = 0;
+    int tank_laser_frame_nr = 0;
+    int tank_laser_frame_time = 1;
+    
+    // Tank Miss
+    int remove_tank_laser_miss = 0;
+    uint16_t tank_laser_miss_x = 0;
+    uint16_t tank_laser_miss_y = 0;
+
+    // Tank Hit
+    int column_hit;
 
     // For aliens
+    // Data to store about the,
+    int nr_aliens = NR_ALIENS * NR_ROWS;
+    int rows_deleted = 1;
     int columns[NR_ALIENS];
     for (int i = 0; i < NR_ALIENS; i++) {
         columns[i] = NR_ROWS;
     }
-    int row_nr = NR_ROWS - 1;
+    int row_nr = NR_ROWS - rows_deleted;
+
+    // Their y position
+    int start_y = 40;
+    int cleaned_y = 0;
+    
+    // Their x position
+    int alien_right = ALIEN_RIGHT;
+    int alien_left = ALIEN_LEFT;
     int aliens_pos = 16;
     int aliens_direction = 1;
+    
+    // Movement speed
     int alien_frame_nr = 0;
-    int alien_frame_time = 24; // When there are 7 => 5
+    int alien_frame_time = 24; // 24 on start, decrement 2 on every 3 aliens dead
+    
+    // Animation frame
     int aliens_animation_frame = 0;
+
 
     // LCD Sreen
     LCD_printAt(LINE1_ADDR, "Press the Button");
@@ -155,10 +190,10 @@ int main(void) {
         } else {
             if (SYSTICKS_PASSED(last_frame, frame_time)) {
                 last_frame = systicks;
-                
+            
                 // Tank Logic
                 int x_input = myAnalogRead(PC1) - 512;
-                int speed = x_input / 150;
+                int speed = x_input / 180;
                 
                 // Calculate new position, taking into consideration margins
                 uint16_t old_position = tank_position;
@@ -170,33 +205,144 @@ int main(void) {
                 }
                 
                 // Alien Logic
-                if (alien_frame_nr++ == alien_frame_time) {
+                if (alien_frame_nr++ >= alien_frame_time) {
                     alien_frame_nr = 0;
                     
                     // Calculate the y based on what row it draws
-                    int position_y = 5 + row_nr * SCALE * (BUFFER_HEIGHT + 4);
+                    int position_y = start_y + row_nr * SCALE * (BUFFER_HEIGHT + 4);
                     
                     // Draw the row
                     draw_alien_row(tft, columns, aliens_pos, position_y, row_nr, aliens_animation_frame, ST77XX_WHITE);
+                    if (cleaned_y) {
+                        cleaned_y--;
+                        clear_zone(tft, 0, position_y - ALIEN_DROP, WIDTH, ALIEN_DROP);
+                    }
 
                     // Update the row and check if it needs a reset
                     row_nr--;
                     if (row_nr < 0) {
+                        // Change direction at limit
+                        if (aliens_pos >= alien_right) {
+                            start_y += ALIEN_DROP;
+                            aliens_direction = -1;
+                            cleaned_y = NR_ROWS;
+
+                        }
+                        if (aliens_pos <= alien_left) {
+                            start_y += ALIEN_DROP;
+                            aliens_direction = 1;
+                            cleaned_y = NR_ROWS;
+                        }
+                        
                         // Update the new position
-                        row_nr = NR_ROWS - 1;
                         aliens_pos += aliens_direction * ALIEN_JUMP;
+                        row_nr = NR_ROWS - rows_deleted;
 
                         // Change the animation frame
                         aliens_animation_frame = aliens_animation_frame == 0 ? 1 : 0;
+                    }
+                }
 
-                        // Change direction at limit
-                        if (aliens_pos >= ALIEN_RIGHT) {
-                            aliens_direction = -1;
+                // Laser Logic
+                // Tank
+                if (present_tank_laser && tank_laser_frame_nr++ >= tank_laser_frame_time) {
+                    // Reset frame counter
+                    tank_laser_frame_nr = 0;
+
+                    // Calculate new position
+                    tank_laser_y = calcluate_tank_laser_position(tank_laser_y);
+
+                    // printf("Laser_position: %d\n", tank_laser_y);
+                    column_hit = laser_hits_alien(tank_laser_x, tank_laser_y, aliens_pos, start_y, columns);
+                    if (column_hit != -1) {
+                        
+                        // Update the score
+                        int add_score;
+                        switch (columns[column_hit])
+                        {
+                        case 1:
+                            add_score = 30;
+                            break;
+                        case 2:
+                        case 3:
+                            add_score = 20;
+                            break;
+                        case 4:
+                        case 5:
+                        default:
+                            add_score = 10;
+                            break;
                         }
-                        if (aliens_pos <= ALIEN_LEFT) {
-                            aliens_direction = 1;
+                        score += add_score;
+
+                        // Show the new sore
+                        LCD_clear_top_line();
+                        sprintf(score_buffer, "Score: %lu", score);
+                        LCD_printAt(LINE1_ADDR, score_buffer);
+
+                        // Put explosion
+                        draw_alien_explosion(tft, columns[column_hit] - 1, column_hit, aliens_pos, start_y, ST77XX_RED);
+
+                        // Eliminnate the alien
+                        columns[column_hit]--;
+                        nr_aliens--;
+                        
+                        // Check nr of rows remaining
+                        int max = -1;
+                        int found = 0;
+                        int left_free = 0;
+                        int right_free;
+                        for (int i = 0; i < NR_ALIENS; i++) {
+                            if (columns[i] > max)
+                                max = columns[i];
+                            
+                            if (columns[i] != 0) {
+                                found = 1;
+                                right_free = 0;
+                            } else {
+                                right_free++;
+                            }
+
+                            if (!found) {
+                                left_free++;
+                            }
+                        }
+                        rows_deleted = 6 - max;
+                        printf("Free left: %d\tFree right: %d\n\n", left_free, right_free);
+                        alien_left = ALIEN_LEFT - (left_free * BUFFER_WIDTH * SCALE);
+                        alien_right = ALIEN_RIGHT + (right_free * BUFFER_WIDTH * SCALE);
+
+                        // Change the speed
+                        if ((nr_aliens + 1) % 3 == 0) {
+                            alien_frame_time -= 2;
+                        }
+
+                        // Reset the laser
+                        present_tank_laser = false;
+                        draw_tank_laser(tft, tank_laser_x, tank_laser_y, ST77XX_BLACK);
+                    } else {
+                        if (tank_laser_y < 10) {
+                            // Hit the ceiling - delete the laser
+                            present_tank_laser = false;
+                            
+                            // Tank Miss
+                            remove_tank_laser_miss = LASER_LAST;
+                            tank_laser_miss_x = tank_laser_x - BUFFER_WIDTH / 2 * SCALE;
+                            tank_laser_miss_y = tank_laser_y;
+    
+                            // Draw the laser miss + delete the old one
+                            draw_tank_laser(tft, tank_laser_x, tank_laser_y, ST77XX_BLACK);
+                            draw_laser_miss(tft, tank_laser_miss_x, tank_laser_miss_y, ST77XX_RED);
+                        } else {
+                            draw_tank_laser(tft, tank_laser_x, tank_laser_y, ST77XX_GREEN);
                         }
                     }
+
+                }
+
+                // Tank miss
+                if (remove_tank_laser_miss-- == 1) {
+                    clear_zone(tft, tank_laser_miss_x, tank_laser_miss_y, BUFFER_WIDTH * SCALE, BUFFER_HEIGHT * SCALE);
                 }
 
                 // Debugging
@@ -207,12 +353,12 @@ int main(void) {
             }
         }
 
-        int y = -(myAnalogRead(PC0) - 512);
-        int x = myAnalogRead(PC1) - 512;
+        // int y = -(myAnalogRead(PC0) - 512);
+        // int x = myAnalogRead(PC1) - 512;
         
         // Button Pressed and Held
         if ((PIND & (1 << PD2))) {
-            printf("X: %d\nY: %d\n\n", x, y);
+            // printf("X: %d\nY: %d\n\n", x, y);
             OCR2A = 120;
         } else {
             OCR2A = 0;
@@ -220,7 +366,6 @@ int main(void) {
         
         // Just the initial press
         if (button_pressed) {
-            printf("Yey, intrerupere\n");
             button_pressed = 0;
             
             if (game_state == MENU) {
@@ -231,7 +376,9 @@ int main(void) {
                 LCD_clear_top_line();
                 LCD_clear_bottom_line();
     
-                LCD_printAt(LINE1_ADDR, "Score: ");
+                sprintf(score_buffer, "Score: %lu", score);
+
+                LCD_printAt(LINE1_ADDR, score_buffer);
                 LCD_printAt(LINE2_ADDR, "Lives: 3");
         
                 // Init the Screen Game
@@ -242,7 +389,7 @@ int main(void) {
 
                 // Init the Aliens
                 for (int i = 0; i < NR_ROWS; i++) {
-                    int position_y = 5 + i * SCALE * (BUFFER_HEIGHT + 4);
+                    int position_y = start_y + i * SCALE * (BUFFER_HEIGHT + 4);
                     
                     draw_alien_row(tft, columns, aliens_pos, position_y, i, aliens_animation_frame, ST77XX_WHITE);
                 }
@@ -251,8 +398,17 @@ int main(void) {
                 continue_singing = 0;
                 OCR0A = 0;
             } else {
-                // Shooting
-
+                // Shoot only if there is no other laser from the tank
+                if (!present_tank_laser) {
+                    // Shooting
+                    present_tank_laser = true;
+    
+                    // Start cordonates
+                    tank_laser_x = tank_position + BUFFER_WIDTH / 2 * SCALE;
+                    tank_laser_y = PLAY_TANK_Y - BUFFER_HEIGHT * SCALE / 2;
+                    
+                    tank_laser_frame_nr = tank_laser_frame_time; // To start moving from the beggining
+                }
             }
         }
 

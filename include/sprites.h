@@ -15,7 +15,20 @@ extern const uint8_t alien2_frame1[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
 extern const uint8_t alien3_frame0[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
 extern const uint8_t alien3_frame1[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
 
+extern const uint8_t alien_explosion[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
+
+
 // Tank
 extern const uint8_t tank_sprite[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
+
+extern const uint8_t tank_explosion_frame0[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
+extern const uint8_t tank_explosion_frame1[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
+
+// Lasers
+extern const uint8_t alien_laser[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
+extern const uint8_t tank_laser[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
+
+extern const uint8_t laser_miss[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
+
 
 #endif // SPRITES_H_
