@@ -159,7 +159,7 @@ void draw_alien_explosion(Adafruit_ST7789 &tft,
                           uint16_t start_y,
                           uint16_t color)
 {
-    const uint16_t sprite_w    = ALIEN_WIDTH * SCALE;
+    const uint16_t sprite_w    = BUFFER_WIDTH * SCALE;
     const uint16_t row_spacing = (BUFFER_HEIGHT + 4) * SCALE;
 
     // Calculate top-left corner of the alien explosion
@@ -235,4 +235,26 @@ int laser_hits_alien(int16_t laser_x,
     }
 
     return -1;
+}
+
+int choose_shooting_column(int columns[NR_ALIENS])
+{
+    // Collect indices of columns that still have alive aliens
+    int alive_idxs[NR_ALIENS];
+    int count = 0;
+    for (int i = 0; i < NR_ALIENS; i++)
+    {
+        if (columns[i] > 0)
+        {
+            alive_idxs[count++] = i;
+        }
+    }
+    if (count == 0)
+    {
+        return -1; 
+    }
+
+    int r = rand() % count;
+
+    return alive_idxs[r];
 }

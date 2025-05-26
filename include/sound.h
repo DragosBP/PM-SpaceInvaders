@@ -3,13 +3,17 @@
 
 #include <stdint.h>
 
-/* The nodes in our melody */
-extern uint16_t surprise_notes[];
 
-/* The durations (in ms) of every note in the melody above */
-extern uint16_t durations[];
+// Laser
+#define LASER_TONE      784
 
-/* Total number of notes in melody (use for iterating!) */
-extern uint8_t num_notes;
+// Melody
+extern uint16_t melody_notes[]; // The nodes in our melody
+extern uint16_t melody_durations[]; // The durations (in ms) of every note in the melody above
+extern uint8_t melody_num_notes; // Total number of notes in melody
 
+// Alien hit
+extern uint16_t alien_hit_notes[]; // The notes when you hit an alien
+extern uint16_t alien_hit_durations[]; // The durations of every nothe in the sounds above
+extern uint8_t alien_hit_num_notes; // Total number of notes in melody
 #endif

@@ -43,7 +43,10 @@
 #define ALIEN_LEFT 4
 
 // Laser constants
-#define LASER_LAST 15
+#define LASER_MISS_LAST 15
+
+// Alien lasers constant
+#define NR_LASERS 3
 
 // Menu functions
 void display_start_screen(Adafruit_ST7789 &tft, char *text);
@@ -69,5 +72,6 @@ void draw_alien_explosion(Adafruit_ST7789 &tft,int row,int col,uint16_t aliens_x
 // Lasers
 void draw_laser_miss(Adafruit_ST7789 &tft, int x0, int y0, uint16_t color);
 int laser_hits_alien(int16_t laser_x, int16_t laser_y, int16_t aliens_x, int16_t aliens_y, int columns[NR_ALIENS]);
+int alien_choose_shooting_column(int columns[NR_ALIENS]);
 
 #endif

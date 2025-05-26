@@ -23,22 +23,20 @@
 #define gSH  830
 #define aH   880
 
-/* The nodes in our melody */
-uint16_t surprise_notes[] = {a,   a,  a,   f,  cH,  a,  f,   cH, a,   eH, eH,
-                             eH,  fH, cH,  gS, f,   cH, a,   aH, a,   a,  aH,
-                             gSH, gH, fSH, fH, fSH, aS, dSH, dH, cSH, cH, b,
-                             cH,  f,  gS,  f,  a,   cH, a,   cH, eH,  aH, a,
-                             a,   aH, gSH, gH, fSH, fH, fSH, aS, dSH, dH, cSH,
-                             cH,  b,  cH,  f,  gS,  f,  cH,  a,  f,   cH, a};
+#define BREAK   0
+#define STEP1   65
+#define STEP2   98
+#define STEP3   131
+#define STEP4   196
 
-/* The durations (in ms) of every note in the melody above */
-uint16_t durations[] = {500, 500, 500, 350, 150, 500, 350, 150, 650, 500, 500,
-                        500, 350, 150, 500, 350, 150, 650, 500, 300, 150, 400,
-                        200, 200, 125, 125, 250, 250, 400, 200, 200, 125, 125,
-                        250, 125, 500, 375, 125, 500, 375, 125, 650, 500, 300,
-                        150, 400, 200, 200, 125, 125, 250, 250, 400, 200, 200,
-                        125, 125, 250, 250, 500, 375, 125, 500, 375, 125, 650};
+// Melody
+uint16_t melody_notes[] = {STEP1, BREAK, STEP2, BREAK, STEP3, BREAK, STEP4, BREAK};
+uint16_t melody_durations[] = {300, 560, 300, 560, 300, 560, 300, 560};
+uint8_t melody_num_notes = sizeof(melody_durations) / sizeof(melody_durations[0]);
 
-/* Total number of notes in melody (use for iterating!) */
-uint8_t num_notes = sizeof(durations) / sizeof(durations[0]);
+// Alien Hit
+uint16_t alien_hit_notes[] = {gH, fH, eH};
+uint16_t alien_hit_durations[] = {250, 250, 250};
+uint8_t alien_hit_num_notes = sizeof(alien_hit_durations) / sizeof(alien_hit_durations[0]);
+
 
