@@ -39,4 +39,10 @@ uint16_t alien_hit_notes[] = {gH, fH, eH};
 uint16_t alien_hit_durations[] = {250, 250, 250};
 uint8_t alien_hit_num_notes = sizeof(alien_hit_durations) / sizeof(alien_hit_durations[0]);
 
+// Death
+uint16_t death_notes[] = {a,  f,  cH, BREAK};
+uint16_t death_durations[] = {1000, 1000, 1000, 1000};
+uint8_t death_num_notes = sizeof(death_durations) / sizeof(death_durations[0]);
+
+
 

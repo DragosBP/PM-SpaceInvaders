@@ -16,4 +16,9 @@ extern uint8_t melody_num_notes; // Total number of notes in melody
 extern uint16_t alien_hit_notes[]; // The notes when you hit an alien
 extern uint16_t alien_hit_durations[]; // The durations of every nothe in the sounds above
 extern uint8_t alien_hit_num_notes; // Total number of notes in melody
+
+// Death
+extern uint16_t death_notes[];
+extern uint16_t death_durations[];
+extern uint8_t death_num_notes;
 #endif

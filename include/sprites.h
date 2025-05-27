@@ -25,9 +25,6 @@ extern const uint8_t tank_explosion_frame0[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
 extern const uint8_t tank_explosion_frame1[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
 
 // Lasers
-extern const uint8_t alien_laser[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
-extern const uint8_t tank_laser[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
-
 extern const uint8_t laser_miss[BUFFER_HEIGHT][BUFFER_WIDTH] PROGMEM;
 
 

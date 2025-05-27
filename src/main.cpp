@@ -49,7 +49,7 @@ void init() {
     DDRD &= ~(1 << PD2);   // Set PD2 as input
     
     // Set PD5 (Buzzer) as output
-    DDRD |= (1 << PD5);
+    // DDRD |= (1 << PD5);
     DDRD |= (1 << PD6);
 
     // Init Usart
@@ -82,7 +82,7 @@ void init() {
     printf("Initialised LCD!\n");
 
     // Init random for the alines
-    srand(ADC);
+    srand(myAnalogRead(0));
 }
 
 
@@ -91,7 +91,7 @@ int main(void) {
     init();
 
     // Some variables declaration
-    // To stop it from singing (AAAAAHHHH)
+    int able_to_start = true;
     int continue_singing = 0;
 
     // For song
@@ -102,18 +102,20 @@ int main(void) {
     // For the game
     int game_state = MENU; 
     int shot_first_bullet = false; 
+    int nr_lives = LIVES_TOTAL;
 
     // For menu
     int show_select = 1;
     uint32_t last_show = 0;
     uint32_t show_time = 800;
     char start[] = "Start Game";
+    char over[] = "Game Over";
     
     // For game
     uint32_t last_frame = 0;
     uint32_t frame_time = 1000 / 30;
     uint32_t score = 0;
-    char score_buffer[20];
+    char text_buffer[20];
 
     // Tank
     // Body
@@ -130,7 +132,7 @@ int main(void) {
     int row_nr = NR_ROWS - rows_deleted;
 
     // Their y position
-    int start_y = 40;
+    int start_y = 30;
     int cleaned_y = 0;
     
     // Their x position
@@ -170,36 +172,46 @@ int main(void) {
     uint16_t alien_hit_note_idx = 0;
 
     // Alien Lasers
-    bool alien_lasers_present[NR_LASERS] = {false, false, false};
+    bool alien_lasers_present[NR_ALIEN_LASERS] = {false, false, false};
     
     // ALien Lasers Generating
     int alien_lasers_generate_current = 0;
-    int alien_lasers_generate_time = 30;
+    int alien_lasers_generate_time = 70; // Minimum - 45, scaling with 7;
+    int alien_laser_speed = 25; // Minimum 25
     int alien_lasers_generate_nr = 0;
 
     // Alien Lasers Position
-    uint16_t alien_laser_x[NR_LASERS] = {0, 0, 0};
-    uint16_t alien_laser_y[NR_LASERS] = {0, 0, 0};
-    int alien_laser_frame_nr = 0;
+    uint16_t alien_lasers_x[NR_ALIEN_LASERS] = {0, 0, 0};
+    uint16_t alien_lasers_y[NR_ALIEN_LASERS] = {0, 0, 0};
+    int alien_lasers_frame_nr = 0;
 
     // Alien Lasers Miss
-    int remove_alien_lasers_miss[NR_LASERS] = {0, 0, 0};
-    uint16_t alien_lasers_miss_x[NR_LASERS] = {0, 0, 0};
-    uint16_t alien_laser_miss_y[NR_LASERS] = {0, 0, 0};
+    int remove_alien_lasers_miss[NR_ALIEN_LASERS] = {0, 0, 0};
+    uint16_t alien_lasers_miss_x[NR_ALIEN_LASERS] = {0, 0, 0};
+    uint16_t alien_lasers_miss_y[NR_ALIEN_LASERS] = {0, 0, 0};
 
-    // Alien Lasers Hit
-    bool alien_lasers_hit = false;
+    // Death variables
+    int death_frame = 0;
+
+    // How long is a death frame
+    int death_frame_time = 20;
+    int death_frame_nr = death_frame_time;
+    
+    // How many death frames
+    int death_nr = 0;
+    int death_total = 7;
+
+    // Death sounds
+    uint32_t death_last_note = 0;
+    uint16_t death_note_idx = 0;
+    
+    bool just_over = false;
 
     // LCD Sreen
-    LCD_printAt(LINE1_ADDR, "Press the Button");
+    LCD_printAt(LINE1_ADDR, "Press Button to");
     LCD_printAt(LINE2_ADDR, "Start the Game!");
     
-
     printf("Started program!\n");
-
-    // Debug
-    int nr = 0;
-    int show = 0;
 
     display_start_screen(tft, start);
     while (1) {
@@ -209,9 +221,88 @@ int main(void) {
             last_frame = systicks;
             last_note = systicks;
             alien_hit_last_note = systicks;
+            death_last_note = systicks;
         }
         
         if (game_state == MENU) {
+            if (just_over) {
+                just_over = false;
+
+                // Reset the displays on the screen on game over
+                display_start_screen(tft, start);
+                LCD_printAt(LINE1_ADDR, "Press Button to");
+                LCD_printAt(LINE2_ADDR, "Start the Game!");
+
+                // And the variables
+                // For the music
+                note_idx = 0;
+                melody_break_speed = 0;
+                
+                // For the game
+                shot_first_bullet = false; 
+                nr_lives = LIVES_TOTAL;
+                last_frame = 0;
+                score = 0;
+
+                // Tank
+                tank_position = 120 - (TANK_WIDTH / 2) * SCALE;
+                
+                // Aliens
+                nr_aliens = NR_ALIENS * NR_ROWS;
+                rows_deleted = 1;
+                for (int i = 0; i < NR_ALIENS; i++) {
+                    columns[i] = NR_ROWS;
+                }
+                row_nr = NR_ROWS - rows_deleted;
+
+                start_y = 30;
+                cleaned_y = 0;
+
+                alien_right = ALIEN_RIGHT;
+                alien_left = ALIEN_LEFT;
+                aliens_pos = 16;
+                aliens_direction = 1;
+
+                alien_frame_nr = 0;
+                alien_frame_time = 24;
+
+                aliens_animation_frame = 0;
+
+                // Lasers
+                // Tank
+                present_tank_laser = false;
+                tank_laser_x = 0;
+                tank_laser_y = 0;
+                tank_laser_frame_nr = 0;
+
+                remove_tank_laser_miss = 0;
+                tank_laser_miss_x = 0;
+                tank_laser_miss_y = 0;
+
+                alien_hit_note_idx = 0;
+
+                // Aliens
+                alien_lasers_generate_current = 0;
+                alien_lasers_generate_time = 70;
+                alien_lasers_generate_nr = 0;
+
+                for (int i = 0; i < NR_ALIEN_LASERS; i++) {
+                    alien_lasers_present[i] = false;
+                    alien_lasers_x[i] = 0;
+                    alien_lasers_y[i] = 0;
+                    remove_alien_lasers_miss[i] = 0;
+                    alien_lasers_miss_x[i] = 0;
+                    alien_lasers_miss_y[i] = 0;
+                }
+
+                alien_lasers_frame_nr = 0;
+                
+                // Death
+                death_frame = 0;
+                death_frame_time = 20;
+                death_frame_nr = death_frame_time;
+            }
+
             if (SYSTICKS_PASSED(last_show, show_time)) {
                 last_show = systicks;
                 
@@ -220,7 +311,7 @@ int main(void) {
                 
                 show_select = show_select ? 0 : 1;
             }
-        } else {
+        } else if (game_state == GAME) {
             if (SYSTICKS_PASSED(last_frame, frame_time)) {
                 last_frame = systicks;
             
@@ -277,7 +368,7 @@ int main(void) {
                 }
 
                 // Laser Logic
-                // Tank
+                // Tank Laser
                 if (present_tank_laser && tank_laser_frame_nr++ >= laser_frame_time) {
                     // Reset frame counter
                     tank_laser_frame_nr = 0;
@@ -285,7 +376,6 @@ int main(void) {
                     // Calculate new position
                     tank_laser_y = calcluate_tank_laser_position(tank_laser_y);
 
-                    // printf("Laser_position: %d\n", tank_laser_y);
                     column_hit = laser_hits_alien(tank_laser_x, tank_laser_y, aliens_pos, start_y, columns);
                     if (column_hit != -1) {
                         // Stop laser sound and start alien hit sound
@@ -313,8 +403,8 @@ int main(void) {
 
                         // Show the new sore
                         LCD_clear_top_line();
-                        sprintf(score_buffer, "Score: %lu", score);
-                        LCD_printAt(LINE1_ADDR, score_buffer);
+                        sprintf(text_buffer, "Score: %lu", score);
+                        LCD_printAt(LINE1_ADDR, text_buffer);
 
                         // Put explosion
                         draw_alien_explosion(tft, columns[column_hit] - 1, column_hit, aliens_pos, start_y, ST77XX_RED);
@@ -354,6 +444,10 @@ int main(void) {
                         // Change the speed
                         if ((nr_aliens + 1) % 3 == 0) {
                             alien_frame_time -= 2;
+                            alien_laser_speed -= 2;
+                            if (alien_laser_speed < 1) {
+                                alien_laser_speed = 1;
+                            }
                             melody_break_speed += 50;
                         }
 
@@ -361,23 +455,170 @@ int main(void) {
                         present_tank_laser = false;
                         draw_tank_laser(tft, tank_laser_x, tank_laser_y, ST77XX_BLACK);
                     } else {
-                        if (tank_laser_y < 10) {
-                            // Hit the ceiling - delete the laser
-                            present_tank_laser = false;
-                            
-                            // Tank Miss
-                            remove_tank_laser_miss = LASER_MISS_LAST;
-                            tank_laser_miss_x = tank_laser_x - BUFFER_WIDTH / 2 * SCALE;
-                            tank_laser_miss_y = tank_laser_y;
-    
-                            // Draw the laser miss + delete the old one
-                            draw_tank_laser(tft, tank_laser_x, tank_laser_y, ST77XX_BLACK);
-                            draw_laser_miss(tft, tank_laser_miss_x, tank_laser_miss_y, ST77XX_RED);
+                        // Check if it hits any alien lasers
+                        int alien_laser_hit = -1;
+                        for (int i = 0; i < NR_ALIEN_LASERS; i++) {
+                            if (!alien_lasers_present[i])
+                                continue; 
+
+                            int laser_x = alien_lasers_x[i];
+                            int laser_y = alien_lasers_y[i];
+
+                            if (laser_hits_tank_laser(laser_x, laser_y, tank_laser_x, tank_laser_y)) {
+                                alien_laser_hit = i;
+                                break;
+                            };
+                        }
+
+                        if (alien_laser_hit == -1) {
+                            if (tank_laser_y < 10) {
+                                // Hit the ceiling - delete the laser
+                                present_tank_laser = false;
+                                
+                                
+                                // Tank Miss
+                                remove_tank_laser_miss = LASER_MISS_LAST;
+                                tank_laser_miss_x = tank_laser_x - BUFFER_WIDTH / 2 * SCALE;
+                                tank_laser_miss_y = tank_laser_y;
+        
+                                // Draw the laser miss + delete the old one
+                                draw_tank_laser(tft, tank_laser_x, tank_laser_y, ST77XX_BLACK);
+                                draw_laser_miss(tft, tank_laser_miss_x, tank_laser_miss_y, ST77XX_RED);
+                            } else {
+                                draw_tank_laser(tft, tank_laser_x, tank_laser_y, ST77XX_GREEN);
+                            }
                         } else {
-                            draw_tank_laser(tft, tank_laser_x, tank_laser_y, ST77XX_GREEN);
+                            // It hit an alien laser
+                            int i = alien_laser_hit;
+                            int laser_x = alien_lasers_x[i];
+                            int laser_y = alien_lasers_y[i];
+
+                            // Reset the sound
+                            OCR2A = 0;
+                        
+                            // Reset the laser
+                            present_tank_laser = false;
+                            draw_tank_laser(tft, tank_laser_x, tank_laser_y, ST77XX_BLACK);
+
+                            // Reset the alien laser
+                            alien_lasers_present[i] = false;
+                                
+                            // Draw the explosion as a miss
+                            remove_alien_lasers_miss[i] = LASER_MISS_LAST / 2;
+                            alien_lasers_miss_x[i] = laser_x - BUFFER_WIDTH * SCALE / 2;
+                            alien_lasers_miss_y[i] = laser_y;
+    
+                            // Draw the laser miss + delete the old laser
+                            draw_alien_laser(tft, laser_x, laser_y, ST77XX_BLACK);
+                            draw_laser_miss(tft, alien_lasers_miss_x[i], alien_lasers_miss_y[i], ST77XX_RED);
                         }
                     }
 
+                }
+
+                // Alien Lasers
+                // Generating
+                if (alien_lasers_generate_nr++ >= alien_lasers_generate_time) {
+                    alien_lasers_generate_nr = 0;
+                    
+                    // Check if the current laser to generate is present
+                    if (!alien_lasers_present[alien_lasers_generate_current]) {
+                        int nr = alien_lasers_generate_current;
+                        alien_lasers_present[nr] = true; // Now it will be present
+
+                        // Choose the column for the laser
+                        int column_choose = alien_choose_shooting_column(columns);
+                        alien_lasers_x[nr] = aliens_pos + column_choose * BUFFER_WIDTH * SCALE + BUFFER_WIDTH * SCALE / 2;
+                        alien_lasers_y[nr] = start_y + (columns[column_choose]) * (BUFFER_HEIGHT + 4) * SCALE;
+                    }
+
+                    // Increment to next one
+                    alien_lasers_generate_current = (alien_lasers_generate_current + 1) % NR_ALIEN_LASERS;
+                }
+
+                // Drawing
+                if (alien_lasers_frame_nr++ >= laser_frame_time + alien_laser_speed) {
+                    // Reset frame counter 
+                    alien_lasers_frame_nr = 0;
+
+                    for (int i = 0; i < NR_ALIEN_LASERS; i++) {
+                        // If it was not shot, just continue further
+                        if (!alien_lasers_present[i])
+                            continue;
+                        
+                        alien_lasers_y[i] = calcluate_alien_laser_position(alien_lasers_y[i]);
+
+                        int laser_x = alien_lasers_x[i];
+                        int laser_y = alien_lasers_y[i];
+
+                        if (present_tank_laser && laser_hits_tank_laser(laser_x, laser_y, tank_laser_x, tank_laser_y)) {
+                            // Reset the sound
+                            OCR2A = 0;
+                        
+                            // Reset the laser
+                            present_tank_laser = false;
+                            draw_tank_laser(tft, tank_laser_x, tank_laser_y, ST77XX_BLACK);
+
+                            // Reset the alien laser
+                            alien_lasers_present[i] = false;
+                                
+                            // Draw the explosion as a miss
+                            remove_alien_lasers_miss[i] = LASER_MISS_LAST / 2;
+                            alien_lasers_miss_x[i] = laser_x - BUFFER_WIDTH * SCALE / 2;
+                            alien_lasers_miss_y[i] = laser_y;
+    
+                            // Draw the laser miss + delete the old laser
+                            draw_alien_laser(tft, laser_x, laser_y, ST77XX_BLACK);
+                            draw_laser_miss(tft, alien_lasers_miss_x[i], alien_lasers_miss_y[i], ST77XX_RED);
+                        } else if (alien_laser_hits_tank(laser_x, laser_y, tank_position, PLAY_TANK_Y)) {
+                            // Set the state to DEATH
+                            game_state = DEATH;
+
+                            // Remove all lasers
+                            // Tank
+                            if (present_tank_laser) {
+                                present_tank_laser = false;
+                                draw_tank_laser(tft, tank_laser_x, tank_laser_y, ST77XX_BLACK);
+                            }
+
+                            // Alien
+                            for (int j = 0; j < NR_ALIEN_LASERS; j++) {
+                                
+                                laser_x = alien_lasers_x[j];
+                                laser_y = alien_lasers_y[j];
+
+                                if (alien_lasers_present[j]) {
+                                    draw_alien_laser(tft, laser_x, laser_y, ST77XX_BLACK);
+                                    alien_lasers_present[j] = false;
+                                }
+                            }
+
+                            // Stop all sounds
+                            continue_singing = false;
+                            continue_alien_hit_sing = false;
+                            OCR0A = 0;
+                            OCR2A = 0;
+                            
+                            break;
+                        } else {
+                            // No hits, draw further
+                            if (laser_y >= 310) {
+                                // Hit the floor - delete the laser
+                                alien_lasers_present[i] = false;
+                                
+                                // Alien Miss
+                                remove_alien_lasers_miss[i] = LASER_MISS_LAST;
+                                alien_lasers_miss_x[i] = laser_x - BUFFER_WIDTH * SCALE / 2;
+                                alien_lasers_miss_y[i] = HEIGHT - BUFFER_HEIGHT * SCALE;
+        
+                                // Draw the laser miss + delete the old laser
+                                draw_alien_laser(tft, laser_x, laser_y, ST77XX_BLACK);
+                                draw_laser_miss(tft, alien_lasers_miss_x[i], alien_lasers_miss_y[i], ST77XX_RED);
+                            } else {
+                                draw_alien_laser(tft, laser_x, laser_y, ST77XX_WHITE);
+                            }
+                        }
+                    }
                 }
 
                 // Tank miss
@@ -386,11 +627,84 @@ int main(void) {
                     clear_zone(tft, tank_laser_miss_x, tank_laser_miss_y, BUFFER_WIDTH * SCALE, BUFFER_HEIGHT * SCALE);
                 }
 
-                // Debugging
-                if (show != 0 && nr++ == show) {
-                    nr = 0;
-                    printf("Speed: %d\nX_Input: %d\nTank position: %u\n\n", speed, x_input, tank_position);
+                // Alien miss
+                for (int i = 0; i < NR_ALIEN_LASERS; i++) {
+                    if (remove_alien_lasers_miss[i]-- == 1) {
+                        clear_zone(tft, alien_lasers_miss_x[i], alien_lasers_miss_y[i], BUFFER_WIDTH * SCALE, BUFFER_HEIGHT * SCALE);
+                    }
                 }
+
+            }
+        } else if (game_state == DEATH) {
+            if (SYSTICKS_PASSED(last_frame, frame_time)) {
+                last_frame = systicks;
+
+                // Display te death
+                if (death_frame_nr++ >= death_frame_time) {
+                    death_frame_nr = 0;
+    
+                    if (death_frame == 1) {
+                        draw_tank_death(tft, tank_position, PLAY_TANK_Y, tank_explosion_frame1, ST77XX_GREEN);
+                        death_frame = 0;
+                    } else {
+                        draw_tank_death(tft, tank_position, PLAY_TANK_Y, tank_explosion_frame0, ST77XX_GREEN);
+                        death_frame = 1;
+                    }
+                    
+    
+                    death_nr++;
+                }
+    
+                // Cehck if it is enough
+                if (death_nr >= death_total) {
+                    // Check lives counter
+                    nr_lives--;
+                    
+                    // Show the new nr of lives
+                    sprintf(text_buffer, "Lives: %d", nr_lives);
+                    LCD_printAt(LINE2_ADDR, text_buffer);
+                    
+                    if (nr_lives <= 0) {
+                        game_state = OVER;
+                        just_over = true;
+                        continue;
+                    }
+    
+                    // Reset some variables
+                    death_nr = 0;
+                    death_note_idx = 0;
+                    
+                    // Turn on the music
+                    continue_singing = true;
+                    OCR2A = 0;
+
+                    // Redraw the tank
+                    draw_tank_bitmap(tft, tank_position, PLAY_TANK_Y, ST77XX_GREEN);
+                    game_state = GAME;
+                    continue;
+                }
+            }
+
+            // Make the sound
+            if (death_note_idx < death_num_notes && SYSTICKS_PASSED(death_last_note, death_durations[death_note_idx])) {
+                death_last_note = systicks;
+
+                OCR2A = (F_CPU / 256) / death_notes[death_note_idx++];
+            }
+
+            if (death_note_idx >= death_num_notes) {
+                OCR2A = 0;
+            }
+        } else if (game_state == OVER) {
+            if (just_over) {
+                able_to_start = false;
+                just_over = false;
+
+                tft.fillScreen(ST77XX_BLACK);
+                display_start_screen(tft, over);
+    
+                LCD_printAt(LINE1_ADDR, "Press Button to");
+                LCD_printAt(LINE2_ADDR, "Go to Menu");
             }
         }
 
@@ -402,6 +716,11 @@ int main(void) {
             button_pressed = 0;
             
             if (game_state == MENU) {
+                if (!able_to_start) {
+                    able_to_start = true;
+                    continue;
+                }
+
                 // Sets the game state    
                 game_state = GAME;
 
@@ -409,10 +728,11 @@ int main(void) {
                 LCD_clear_top_line();
                 LCD_clear_bottom_line();
     
-                sprintf(score_buffer, "Score: %lu", score);
+                sprintf(text_buffer, "Score: %lu", score);
+                LCD_printAt(LINE1_ADDR, text_buffer);
 
-                LCD_printAt(LINE1_ADDR, score_buffer);
-                LCD_printAt(LINE2_ADDR, "Lives: 3");
+                sprintf(text_buffer, "Lives: %d", nr_lives);
+                LCD_printAt(LINE2_ADDR, text_buffer);
         
                 // Init the Screen Game
                 display_start_game(tft);
@@ -429,7 +749,7 @@ int main(void) {
 
                 // Temporary for the song
                 continue_singing = 1;
-            } else {
+            } else if (game_state == GAME) {
                 // Because it shoots a bullet in advance
                 if (!shot_first_bullet) {
                     shot_first_bullet = true;
@@ -449,6 +769,9 @@ int main(void) {
                     
                     tank_laser_frame_nr = laser_frame_time; // To start moving from the beggining
                 }
+            } else if (game_state == OVER) {
+                just_over = true;
+                game_state = MENU;
             }
         }
 

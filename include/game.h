@@ -12,6 +12,8 @@
 // Screen displays options
 #define MENU 0
 #define GAME 1
+#define DEATH 2
+#define OVER 3
 
 // Text sizes
 #define TEXT_SIZE 3
@@ -25,7 +27,7 @@
 #define PLAY_TANK_Y 280
 #define TANK_HEIGHT 9
 #define TANK_WIDTH 15
-#define TANK_LASER_SPEED 10
+#define LIVES_TOTAL 3
 
 // Alien constants
 // Hitbox sizes
@@ -43,10 +45,13 @@
 #define ALIEN_LEFT 4
 
 // Laser constants
+#define LASER_SPEED 10
 #define LASER_MISS_LAST 15
 
 // Alien lasers constant
-#define NR_LASERS 3
+#define NR_ALIEN_LASERS 3
+
+// Death constants
 
 // Menu functions
 void display_start_screen(Adafruit_ST7789 &tft, char *text);
@@ -59,8 +64,9 @@ void clear_zone(Adafruit_ST7789 &tft, int position_x, int position_y, int width,
 // Tank
 void draw_tank_bitmap(Adafruit_ST7789 &tft, int position_x, int position_y, uint16_t color);
 int16_t calcluate_tank_position(int16_t old_position, int speed);
+void draw_tank_death(Adafruit_ST7789 &tft, int position_x, int position_y, const uint8_t sprite[BUFFER_HEIGHT][BUFFER_WIDTH], uint16_t color);
 
-// Tank lasers
+// Tank laser
 void draw_tank_laser(Adafruit_ST7789 &tft, int position_x, int position_y, uint16_t color);
 int16_t calcluate_tank_laser_position(int16_t old_position);
 
@@ -69,9 +75,15 @@ void draw_alien_bitmap(Adafruit_ST7789 &tft, int x0, int y0, const uint8_t sprit
 void draw_alien_row(Adafruit_ST7789 &tft, int columns[NR_ALIENS], uint16_t start_x,  uint16_t position_y, int row_nr, int frame, uint16_t color);
 void draw_alien_explosion(Adafruit_ST7789 &tft,int row,int col,uint16_t aliens_x,uint16_t start_y,uint16_t color);
 
+// Alien laser
+int alien_choose_shooting_column(int columns[NR_ALIENS]);
+int16_t calcluate_alien_laser_position(int16_t old_position);
+void draw_alien_laser(Adafruit_ST7789 &tft, int position_x, int position_y, uint16_t color);
+
 // Lasers
 void draw_laser_miss(Adafruit_ST7789 &tft, int x0, int y0, uint16_t color);
 int laser_hits_alien(int16_t laser_x, int16_t laser_y, int16_t aliens_x, int16_t aliens_y, int columns[NR_ALIENS]);
-int alien_choose_shooting_column(int columns[NR_ALIENS]);
+bool laser_hits_tank_laser(int16_t alien_laser_x, int16_t alien_laser_y, int16_t tank_laser_x, int16_t tank_laser_y);
+bool alien_laser_hits_tank(int16_t laser_x,int16_t laser_y,int16_t tank_x,int16_t tank_y);
 
 #endif

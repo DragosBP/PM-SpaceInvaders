@@ -47,8 +47,9 @@ static uint16_t buffer[BUFFER_WIDTH * BUFFER_HEIGHT * SCALE * SCALE];
 
 // Tank
 void draw_tank_bitmap(Adafruit_ST7789 &tft, int position_x, int position_y, uint16_t color) {
-    clear_zone(tft, 0, position_y, position_x, BUFFER_HEIGHT * SCALE);
-    clear_zone(tft, position_x + BUFFER_WIDTH * SCALE, position_y, WIDTH - (position_x + BUFFER_WIDTH * SCALE), BUFFER_HEIGHT * SCALE);
+    int len = BUFFER_WIDTH * SCALE / 4;
+    clear_zone(tft, position_x - len, position_y, len, BUFFER_HEIGHT * SCALE);
+    clear_zone(tft, position_x + BUFFER_WIDTH * SCALE, position_y, len, BUFFER_HEIGHT * SCALE);
 
     const int sw = BUFFER_WIDTH  * SCALE;
     const int sh = BUFFER_HEIGHT * SCALE;
@@ -83,27 +84,47 @@ int16_t calcluate_tank_position(int16_t old_position, int speed) {
     return tank_position;
 }
 
+void draw_tank_death(Adafruit_ST7789 &tft, int position_x, int position_y, const uint8_t sprite[BUFFER_HEIGHT][BUFFER_WIDTH], uint16_t color) {
+    const int sw = BUFFER_WIDTH  * SCALE;
+    const int sh = BUFFER_HEIGHT * SCALE;
+    uint16_t *buf = buffer;
+
+    clear_zone(tft, position_x, position_y, sw, sh);
+
+    for (int row = 0; row < BUFFER_HEIGHT; row++) {
+        for (int col = 0; col < BUFFER_WIDTH; col++) {
+            bool bit = pgm_read_byte(&sprite[row][col]);
+            for (int dy = 0; dy < SCALE; dy++) {
+                    for (int dx = 0; dx < SCALE; dx++) {
+                    int idx = (row * SCALE + dy) * sw + (col * SCALE + dx);
+                    buf[idx] = bit ? color : ST77XX_BLACK;
+                }
+            }
+        }
+    }
+
+    tft.drawRGBBitmap(position_x, position_y, buf, sw, sh);
+}
+
 void draw_tank_laser(Adafruit_ST7789 &tft, int position_x, int position_y, uint16_t color) {
     const int len = BUFFER_HEIGHT * SCALE / 2;
     
-    clear_zone(tft, position_x, position_y + len, SCALE, TANK_LASER_SPEED);
+    clear_zone(tft, position_x, position_y + len, SCALE, LASER_SPEED);
     
     tft.drawRect(position_x, position_y, SCALE, len, color);
 }
 
 int16_t calcluate_tank_laser_position(int16_t old_position) {
-    int16_t laser_position = old_position - TANK_LASER_SPEED;
+    int16_t laser_position = old_position - LASER_SPEED;
 
     return laser_position;
 }
 
+
 // Aliens
 
 // In your draw call:
-void draw_alien_bitmap(Adafruit_ST7789 &tft,
-                       int x0, int y0,
-                       const uint8_t sprite[BUFFER_HEIGHT][BUFFER_WIDTH],
-                       uint16_t fg_color) {
+void draw_alien_bitmap(Adafruit_ST7789 &tft, int x0, int y0, const uint8_t sprite[BUFFER_HEIGHT][BUFFER_WIDTH], uint16_t fg_color) {
     const int sw = BUFFER_WIDTH  * SCALE;
     const int sh = BUFFER_HEIGHT * SCALE;
     uint16_t *buf = buffer;
@@ -112,7 +133,7 @@ void draw_alien_bitmap(Adafruit_ST7789 &tft,
         for (int col = 0; col < BUFFER_WIDTH; col++) {
             bool bit = pgm_read_byte(&sprite[row][col]);
             for (int dy = 0; dy < SCALE; dy++) {
-                    for (int dx = 0; dx < SCALE; dx++) {
+                for (int dx = 0; dx < SCALE; dx++) {
                     int idx = (row * SCALE + dy) * sw + (col * SCALE + dx);
                     buf[idx] = bit ? fg_color : ST77XX_BLACK;
                 }
@@ -123,14 +144,7 @@ void draw_alien_bitmap(Adafruit_ST7789 &tft,
     tft.drawRGBBitmap(x0, y0, buf, sw, sh);
 }
 
-
-void draw_alien_row(Adafruit_ST7789 &tft,
-                    int columns[NR_ALIENS],
-                    uint16_t start_x,
-                    uint16_t position_y,
-                    int row_nr,
-                    int frame,
-                    uint16_t color) {
+void draw_alien_row(Adafruit_ST7789 &tft, int columns[NR_ALIENS], uint16_t start_x, uint16_t position_y, int row_nr, int frame, uint16_t color) {
     clear_zone(tft, 0, position_y, start_x, BUFFER_HEIGHT * SCALE);
 
 
@@ -152,12 +166,7 @@ void draw_alien_row(Adafruit_ST7789 &tft,
     }
 }
 
-void draw_alien_explosion(Adafruit_ST7789 &tft,
-                          int row,
-                          int col,
-                          uint16_t aliens_x,
-                          uint16_t start_y,
-                          uint16_t color)
+void draw_alien_explosion(Adafruit_ST7789 &tft, int row, int col, uint16_t aliens_x, uint16_t start_y, uint16_t color)
 {
     const uint16_t sprite_w    = BUFFER_WIDTH * SCALE;
     const uint16_t row_spacing = (BUFFER_HEIGHT + 4) * SCALE;
@@ -167,6 +176,44 @@ void draw_alien_explosion(Adafruit_ST7789 &tft,
     uint16_t y = start_y + row * row_spacing;
 
     draw_alien_bitmap(tft, x, y, alien_explosion, color);
+}
+
+
+// Alien Lasers
+int alien_choose_shooting_column(int columns[NR_ALIENS])
+{
+    // Collect indices of columns that still have alive aliens
+    int alive_idxs[NR_ALIENS];
+    int count = 0;
+    for (int i = 0; i < NR_ALIENS; i++)
+    {
+        if (columns[i] > 0)
+        {
+            alive_idxs[count++] = i;
+        }
+    }
+    if (count == 0)
+    {
+        return -1; 
+    }
+
+    int r = rand() % count;
+
+    return alive_idxs[r];
+}
+
+int16_t calcluate_alien_laser_position(int16_t old_position) {
+    int16_t laser_position = old_position + LASER_SPEED;
+
+    return laser_position;
+}
+
+void draw_alien_laser(Adafruit_ST7789 &tft, int position_x, int position_y, uint16_t color) {
+    const int len = BUFFER_HEIGHT * SCALE / 2;
+    
+    clear_zone(tft, position_x, position_y - 2 * len - SCALE, SCALE, LASER_SPEED);
+    
+    tft.drawRect(position_x, position_y - len, SCALE, len, color);
 }
 
 // Lasers 
@@ -190,12 +237,7 @@ void draw_laser_miss(Adafruit_ST7789 &tft, int x0, int y0, uint16_t color) {
     tft.drawRGBBitmap(x0, y0, buf, sw, sh);
 }
 
-int laser_hits_alien(int16_t laser_x,
-                      int16_t laser_y,
-                      int16_t aliens_x,
-                      int16_t start_y,
-                      int columns[NR_ALIENS]
-                    )
+int laser_hits_alien(int16_t laser_x, int16_t laser_y, int16_t aliens_x, int16_t start_y, int columns[NR_ALIENS])
 {
     const int16_t aw          = ALIEN_WIDTH * SCALE;
     const int16_t sprite_h    = BUFFER_HEIGHT * SCALE;
@@ -237,24 +279,52 @@ int laser_hits_alien(int16_t laser_x,
     return -1;
 }
 
-int choose_shooting_column(int columns[NR_ALIENS])
+bool laser_hits_tank_laser(int16_t alien_laser_x,int16_t alien_laser_y, int16_t tank_laser_x,int16_t tank_laser_y)
+
 {
-    // Collect indices of columns that still have alive aliens
-    int alive_idxs[NR_ALIENS];
-    int count = 0;
-    for (int i = 0; i < NR_ALIENS; i++)
-    {
-        if (columns[i] > 0)
-        {
-            alive_idxs[count++] = i;
-        }
-    }
-    if (count == 0)
-    {
-        return -1; 
-    }
+    const int16_t w = SCALE;
+    const int16_t h = LASER_SPEED * SCALE;
 
-    int r = rand() % count;
+    // Alien laser: bottom-left at (x,y), extends *up* h pixels
+    int16_t ax0     = alien_laser_x;
+    int16_t ax1     = alien_laser_x + w - 1;
+    int16_t ay_bot  = alien_laser_y;
+    int16_t ay_top  = alien_laser_y - (h - 1);
 
-    return alive_idxs[r];
+    // Tank laser: top-left at (x,y), extends *down* h pixels
+    int16_t tx0     = tank_laser_x;
+    int16_t tx1     = tank_laser_x + w - 1;
+    int16_t ty_top  = tank_laser_y;
+    int16_t ty_bot  = tank_laser_y + (h - 1);
+
+    // No horizontal overlap?
+    if (ax1 < tx0 || ax0 > tx1) return false;
+    // No vertical overlap?
+    if (ay_bot < ty_top || ay_top > ty_bot) return false;
+
+    return true;  // overlapping boxes
 }
+
+bool alien_laser_hits_tank(int16_t laser_x, int16_t laser_y, int16_t tank_x, int16_t tank_y) {
+    const int16_t laser_w = SCALE;
+    const int16_t laser_h = LASER_SPEED * SCALE;
+
+    // Alien laser box: bottom-left at (laser_x,laser_y)
+    int16_t lx0 = laser_x;
+    int16_t lx1 = laser_x + laser_w - 1;
+    int16_t ly1 = laser_y;                   // bottom edge
+    int16_t ly0 = laser_y - (laser_h - 1);    // top edge (grows upward)
+
+    // Tank box: top-left at (tank_x,tank_y)
+    int16_t tx0 = tank_x;
+    int16_t tx1 = tank_x + TANK_WIDTH * SCALE - 1;
+    int16_t ty0 = tank_y;
+    int16_t ty1 = tank_y + TANK_HEIGHT * SCALE - 1;
+
+    // AABB overlap test
+    bool x_ok = (lx1 >= tx0 && lx0 <= tx1);
+    bool y_ok = (ly1 >= ty0 && ly0 <= ty1);
+
+    return x_ok && y_ok;
+}
+
