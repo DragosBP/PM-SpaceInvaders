@@ -93,6 +93,7 @@ int main(void) {
     // Some variables declaration
     int able_to_start = true;
     int continue_singing = 0;
+    int level = 0;
 
     // For song
     uint32_t last_note = 0;
@@ -132,7 +133,7 @@ int main(void) {
     int row_nr = NR_ROWS - rows_deleted;
 
     // Their y position
-    int start_y = 30;
+    int start_y = START_ALIEN_Y;
     int cleaned_y = 0;
     
     // Their x position
@@ -237,6 +238,7 @@ int main(void) {
                 // For the music
                 note_idx = 0;
                 melody_break_speed = 0;
+                level = 0;
                 
                 // For the game
                 shot_first_bullet = false; 
@@ -255,7 +257,7 @@ int main(void) {
                 }
                 row_nr = NR_ROWS - rows_deleted;
 
-                start_y = 30;
+                start_y = START_ALIEN_Y;
                 cleaned_y = 0;
 
                 alien_right = ALIEN_RIGHT;
@@ -284,6 +286,7 @@ int main(void) {
                 // Aliens
                 alien_lasers_generate_current = 0;
                 alien_lasers_generate_time = 70;
+                int alien_laser_speed = 25;
                 alien_lasers_generate_nr = 0;
 
                 for (int i = 0; i < NR_ALIEN_LASERS; i++) {
@@ -358,6 +361,7 @@ int main(void) {
                             cleaned_y = NR_ROWS;
                         }
                         
+                        
                         // Update the new position
                         aliens_pos += aliens_direction * ALIEN_JUMP;
                         row_nr = NR_ROWS - rows_deleted;
@@ -417,6 +421,10 @@ int main(void) {
                         columns[column_hit]--;
                         nr_aliens--;
                         
+                        if (nr_aliens == 0) {
+                            game_state = NEXT;
+                        }
+
                         // Check nr of rows remaining
                         int max = -1;
                         int found = 0;
@@ -444,10 +452,15 @@ int main(void) {
                         // Change the speed
                         if ((nr_aliens + 1) % 3 == 0) {
                             alien_frame_time -= 2;
+                            if (alien_frame_time < 1) {
+                                alien_frame_time = 1;
+                            }
+
                             alien_laser_speed -= 2;
                             if (alien_laser_speed < 1) {
                                 alien_laser_speed = 1;
                             }
+
                             melody_break_speed += 50;
                         }
 
@@ -634,6 +647,17 @@ int main(void) {
                     }
                 }
 
+                // Alien reached the bottom
+                if (start_y - (rows_deleted - 1) * BUFFER_HEIGHT * SCALE > 160) {
+                    // Stop all sounds
+                    continue_singing = false;
+                    continue_alien_hit_sing = false;
+                    OCR0A = 0;
+                    OCR2A = 0;
+                    
+                    // Change the state (for drawing it is cleared by the OVER state)
+                    game_state = OVER;
+                }
             }
         } else if (game_state == DEATH) {
             if (SYSTICKS_PASSED(last_frame, frame_time)) {
@@ -706,6 +730,77 @@ int main(void) {
                 LCD_printAt(LINE1_ADDR, "Press Button to");
                 LCD_printAt(LINE2_ADDR, "Go to Menu");
             }
+        } else if (game_state == NEXT) {
+            level++;
+            game_state = GAME;
+            tft.fillScreen(ST77XX_BLACK);
+
+            note_idx = 0;
+            melody_break_speed = 0;
+
+            // Tank
+            tank_position = 120 - (TANK_WIDTH / 2) * SCALE;
+
+            // Aliens
+            nr_aliens = NR_ALIENS * NR_ROWS;
+            rows_deleted = 1;
+            for (int i = 0; i < NR_ALIENS; i++) {
+                columns[i] = NR_ROWS;
+            }
+            row_nr = NR_ROWS - rows_deleted;
+
+            start_y = START_ALIEN_Y + (level * ALIEN_DROP) % 120;
+            cleaned_y = 0;
+
+            alien_right = ALIEN_RIGHT;
+            alien_left = ALIEN_LEFT;
+            aliens_pos = 16;
+            aliens_direction = 1;
+
+            alien_frame_nr = 0;
+            alien_frame_time = 24 - level;
+            if (alien_frame_time < 1) {
+                alien_frame_time = 1;
+            }
+
+            aliens_animation_frame = 0;
+            
+            // Lsers
+            // Tank
+            present_tank_laser = false;
+            tank_laser_x = 0;
+            tank_laser_y = 0;
+            tank_laser_frame_nr = 0;
+
+            remove_tank_laser_miss = 0;
+            tank_laser_miss_x = 0;
+            tank_laser_miss_y = 0;
+
+            alien_hit_note_idx = 0;
+
+            // Aliens
+            alien_lasers_generate_current = 0;
+            alien_lasers_generate_time = 70 - level * 7;
+            if (alien_lasers_generate_time < 35) {
+                alien_lasers_generate_time = 35;
+            }
+            int alien_laser_speed = 25 - level;
+            if (alien_laser_speed < 10) {
+                alien_laser_speed = 10;
+            }
+
+            alien_lasers_generate_nr = 0;
+
+            for (int i = 0; i < NR_ALIEN_LASERS; i++) {
+                alien_lasers_present[i] = false;
+                alien_lasers_x[i] = 0;
+                alien_lasers_y[i] = 0;
+                remove_alien_lasers_miss[i] = 0;
+                alien_lasers_miss_x[i] = 0;
+                alien_lasers_miss_y[i] = 0;
+            }
+
+            alien_lasers_frame_nr = 0;
         }
 
         // int y = -(myAnalogRead(PC0) - 512);

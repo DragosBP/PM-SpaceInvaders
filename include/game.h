@@ -14,6 +14,7 @@
 #define GAME 1
 #define DEATH 2
 #define OVER 3
+#define NEXT 4
 
 // Text sizes
 #define TEXT_SIZE 3
@@ -39,10 +40,12 @@
 #define NR_ROWS 5
 
 // Movement
-#define ALIEN_DROP 5
+#define ALIEN_DROP 10
 #define ALIEN_JUMP 2
 #define ALIEN_RIGHT 30
 #define ALIEN_LEFT 4
+#define START_ALIEN_Y 30
+#define MAX_ALIEN_Y 140
 
 // Laser constants
 #define LASER_SPEED 10
@@ -50,8 +53,6 @@
 
 // Alien lasers constant
 #define NR_ALIEN_LASERS 3
-
-// Death constants
 
 // Menu functions
 void display_start_screen(Adafruit_ST7789 &tft, char *text);
